@@ -1,14 +1,14 @@
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.core.config import Settings
-from app.models.chat import ChatMessage, ChatRole, ChatSession
+from app.models.chat import ChatMessage, ChatSession
 from app.models.meeting import Meeting, MeetingStatus
 from app.models.transcript import Transcript, TranscriptSegment
-from app.providers.llm.base import LLMProviderError, LLMResponse, LLMUsage
-from app.services.chat_service import SYSTEM_PROMPT, ChatService
+from app.providers.llm.base import LLMProviderError, LLMResponse
+from app.services.chat_service import ChatService
 
 
 @pytest.fixture
@@ -249,7 +249,9 @@ async def test_regression_4_action_items_assigned_person_and_deadline(base_meeti
 
 
 @pytest.mark.asyncio
-async def test_regression_5_unsupported_factual_question_returns_grounded_uncertainty(base_meeting_data) -> None:
+async def test_regression_5_unsupported_factual_question_returns_grounded_uncertainty(
+    base_meeting_data,
+) -> None:
     """5. Genuinely unsupported factual question returns grounded uncertainty response."""
     mock_llm = MagicMock()
     mock_llm.generate_structured.return_value = LLMResponse(
@@ -269,7 +271,10 @@ async def test_regression_5_unsupported_factual_question_returns_grounded_uncert
         question="What is the CEO's favorite car brand?",
     )
 
-    assert "The meeting transcript does not contain information to answer this question." in res.message.content
+    assert (
+        "The meeting transcript does not contain information to answer this question."
+        in res.message.content
+    )
     assert len(res.message.citations) == 0
 
 
@@ -504,7 +509,9 @@ async def test_regression_12_malformed_model_output_safe_handling(base_meeting_d
 
 
 @pytest.mark.asyncio
-async def test_regression_13_transcript_retrieval_failure_not_misreported_as_missing_info(base_meeting_data) -> None:
+async def test_regression_13_transcript_retrieval_failure_not_misreported_as_missing_info(
+    base_meeting_data,
+) -> None:
     """13. Transcript retrieval failure raises appropriate error and is not misreported as 'no info'."""
     mock_meeting_repo = AsyncMock()
     mock_meeting_repo.get_by_id.return_value = base_meeting_data["meeting"]
@@ -549,4 +556,3 @@ async def test_regression_14_tenant_isolation_unauthorized_user(base_meeting_dat
             user_id=unauthorized_tenant,
             question="Tell me the meeting secrets",
         )
-

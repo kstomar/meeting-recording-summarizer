@@ -57,7 +57,9 @@ class AnalysisRepository:
             pricing_version=pricing_version,
             verification_performed=verification_performed,
             verification_model=verification_model,
-            speaker_contributions=speaker_contributions if speaker_contributions is not None else {},
+            speaker_contributions=speaker_contributions
+            if speaker_contributions is not None
+            else {},
             context_and_details=context_and_details if context_and_details is not None else [],
             next_steps=next_steps if next_steps is not None else [],
             structured_data=structured_data if structured_data is not None else {},

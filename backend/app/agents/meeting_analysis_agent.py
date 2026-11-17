@@ -446,7 +446,12 @@ class MeetingAnalysisAgent:
                 sc = cf.get("speaker_contributions", {})
                 for spk, data in sc.items():
                     if spk not in merged_contribs:
-                        merged_contribs[spk] = {"contributions": [], "proposals": [], "concerns": [], "commitments": []}
+                        merged_contribs[spk] = {
+                            "contributions": [],
+                            "proposals": [],
+                            "concerns": [],
+                            "commitments": [],
+                        }
                     for k in ["contributions", "proposals", "concerns", "commitments"]:
                         for item in data.get(k, []):
                             if item not in merged_contribs[spk][k]:

@@ -1,11 +1,10 @@
 import uuid
-from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.agents.meeting_analysis_agent import MeetingAnalysisAgent
-from app.agents.verification_agent import MaterialInventoryItem, VerificationAgent
+from app.agents.verification_agent import VerificationAgent
 from app.core.config import Settings
 from app.models.meeting_analysis import MeetingAnalysis
 from app.models.transcript import TranscriptSegment
@@ -15,12 +14,11 @@ from app.schemas.analysis import (
     DecisionConfidence,
     DecisionOutput,
     MeetingAnalysisOutput,
-    OpenQuestionOutput,
     RiskOutput,
     TopicOutput,
 )
 from app.services.analysis_service import AnalysisService
-from app.services.export_service import ExportFormat, ExportService
+from app.services.export_service import ExportService
 from app.services.transcript_chunker import TranscriptChunker
 
 
@@ -29,7 +27,7 @@ def test_short_meeting_distinct_points() -> None:
     mock_provider = MagicMock(spec=LLMProvider)
     seg1 = uuid.uuid4()
     seg2 = uuid.uuid4()
-    seg3 = uuid.uuid4()
+    uuid.uuid4()
 
     json_output = {
         "title": "Short Sync",
@@ -66,11 +64,34 @@ def test_short_meeting_distinct_points() -> None:
         "risks": [],
         "open_questions": [],
         "speaker_contributions": {
-            "Alice": {"contributions": ["Proposed 30-day token rotation"], "proposals": ["30-day token rotation"], "concerns": [], "commitments": []},
-            "Bob": {"contributions": ["Handled Stripe configuration"], "proposals": ["7-day grace period"], "concerns": [], "commitments": ["Configure Stripe dashboard"]},
+            "Alice": {
+                "contributions": ["Proposed 30-day token rotation"],
+                "proposals": ["30-day token rotation"],
+                "concerns": [],
+                "commitments": [],
+            },
+            "Bob": {
+                "contributions": ["Handled Stripe configuration"],
+                "proposals": ["7-day grace period"],
+                "concerns": [],
+                "commitments": ["Configure Stripe dashboard"],
+            },
         },
-        "context_and_details": [{"category": "Security", "detail": "30-day JWT rotation interval", "evidence_segment_ids": [str(seg1)]}],
-        "next_steps": [{"step_text": "Deploy Stripe config", "owner": "Bob", "timeframe": "Tomorrow", "evidence_segment_ids": [str(seg2)]}],
+        "context_and_details": [
+            {
+                "category": "Security",
+                "detail": "30-day JWT rotation interval",
+                "evidence_segment_ids": [str(seg1)],
+            }
+        ],
+        "next_steps": [
+            {
+                "step_text": "Deploy Stripe config",
+                "owner": "Bob",
+                "timeframe": "Tomorrow",
+                "evidence_segment_ids": [str(seg2)],
+            }
+        ],
     }
     mock_provider.generate_structured.return_value = LLMResponse(
         provider="mock",
@@ -83,8 +104,20 @@ def test_short_meeting_distinct_points() -> None:
     settings = Settings(LLM_MODEL="gpt-oss-120b")
     agent = MeetingAnalysisAgent(mock_provider, settings)
     segments = [
-        {"id": str(seg1), "start_time": 0.0, "end_time": 5.0, "speaker": "Alice", "text": "Let us rotate tokens every 30 days."},
-        {"id": str(seg2), "start_time": 5.0, "end_time": 10.0, "speaker": "Bob", "text": "I will configure Stripe grace period tomorrow."},
+        {
+            "id": str(seg1),
+            "start_time": 0.0,
+            "end_time": 5.0,
+            "speaker": "Alice",
+            "text": "Let us rotate tokens every 30 days.",
+        },
+        {
+            "id": str(seg2),
+            "start_time": 5.0,
+            "end_time": 10.0,
+            "speaker": "Bob",
+            "text": "I will configure Stripe grace period tomorrow.",
+        },
     ]
     res, _ = agent.analyze_transcript(segments)
     assert len(res.topics) == 2
@@ -98,7 +131,13 @@ def test_long_meeting_distributed_facts() -> None:
     """2. A long meeting with important facts distributed across many chunks."""
     chunker = TranscriptChunker(max_prompt_tokens=80, overlap_tokens=20)
     segs = [
-        {"id": f"s-{i}", "start_time": float(i * 10), "end_time": float((i + 1) * 10), "speaker": f"Speaker_{i % 2}", "text": f"Substantive fact and decision item number {i} discussed in detail."}
+        {
+            "id": f"s-{i}",
+            "start_time": float(i * 10),
+            "end_time": float((i + 1) * 10),
+            "speaker": f"Speaker_{i % 2}",
+            "text": f"Substantive fact and decision item number {i} discussed in detail.",
+        }
         for i in range(10)
     ]
     chunks = chunker.chunk_segments(segs)
@@ -115,8 +154,20 @@ def test_participant_requesting_work_from_another() -> None:
     mock_provider = MagicMock(spec=LLMProvider)
     seg_id = uuid.uuid4()
     segments = [
-        {"id": str(seg_id), "start_time": 0.0, "end_time": 5.0, "speaker": "Alice", "text": "Charlie, can you please review the frontend PR by 5 PM?"},
-        {"id": str(uuid.uuid4()), "start_time": 5.0, "end_time": 10.0, "speaker": "Charlie", "text": "Sure Alice, I will review it before 5 PM."},
+        {
+            "id": str(seg_id),
+            "start_time": 0.0,
+            "end_time": 5.0,
+            "speaker": "Alice",
+            "text": "Charlie, can you please review the frontend PR by 5 PM?",
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "start_time": 5.0,
+            "end_time": 10.0,
+            "speaker": "Charlie",
+            "text": "Sure Alice, I will review it before 5 PM.",
+        },
     ]
     # Verifier should ensure Charlie is owner, NOT Alice (who made the request)
     verifier = VerificationAgent(mock_provider, Settings(LLM_MODEL="gpt-oss-120b"))
@@ -136,7 +187,11 @@ def test_task_mentioned_by_one_person_assigned_to_another() -> None:
     mock_provider = MagicMock(spec=LLMProvider)
     seg_id = uuid.uuid4()
     # Segment where Dave mentions database migration, but assigns to Frank
-    segment = {"id": str(seg_id), "speaker": "Dave", "text": "We need to run the database migration. Frank, you take ownership of that."}
+    segment = {
+        "id": str(seg_id),
+        "speaker": "Dave",
+        "text": "We need to run the database migration. Frank, you take ownership of that.",
+    }
     verifier = VerificationAgent(mock_provider, Settings(LLM_MODEL="gpt-oss-120b"))
     action_item = ActionItemOutput(
         action_text="Run database migration",
@@ -171,7 +226,7 @@ def test_tentative_decision_remains_conditional() -> None:
 
 def test_two_participants_disagreeing() -> None:
     """7. Two participants disagreeing."""
-    mock_provider = MagicMock(spec=LLMProvider)
+    MagicMock(spec=LLMProvider)
     risk_output = RiskOutput(
         risk_text="Alice prefers REST API while Bob advocates for gRPC due to streaming performance requirements",
         evidence_segment_ids=[uuid.uuid4()],
@@ -226,15 +281,30 @@ def test_action_item_with_explicit_owner_but_no_deadline() -> None:
 def test_question_and_answer_appearing_in_separate_chunks() -> None:
     """12. A question and its answer appearing in separate chunks."""
     chunk1_finding = {
-        "open_questions": [{"question_text": "Do we support SAML authentication?", "evidence_segment_ids": []}],
+        "open_questions": [
+            {"question_text": "Do we support SAML authentication?", "evidence_segment_ids": []}
+        ],
         "topics": [],
         "decisions": [],
         "action_items": [],
         "risks": [],
     }
     chunk2_finding = {
-        "topics": [{"title": "Auth Architecture", "summary": "Confirmed SAML is supported via Okta.", "discussion_progression": None, "evidence_segment_ids": []}],
-        "decisions": [{"decision_text": "SAML 2.0 support enabled via Okta integration", "confidence": "EXPLICIT", "evidence_segment_ids": []}],
+        "topics": [
+            {
+                "title": "Auth Architecture",
+                "summary": "Confirmed SAML is supported via Okta.",
+                "discussion_progression": None,
+                "evidence_segment_ids": [],
+            }
+        ],
+        "decisions": [
+            {
+                "decision_text": "SAML 2.0 support enabled via Okta integration",
+                "confidence": "EXPLICIT",
+                "evidence_segment_ids": [],
+            }
+        ],
         "action_items": [],
         "risks": [],
         "open_questions": [],
@@ -247,9 +317,27 @@ def test_question_and_answer_appearing_in_separate_chunks() -> None:
 def test_important_point_at_beginning_or_end() -> None:
     """13. An important point at the beginning or end of the transcript."""
     segments = [
-        {"id": "seg-start", "start_time": 0.0, "end_time": 5.0, "speaker": "Alice", "text": "Welcome everyone. The sole objective today is approving the FY27 budget."},
-        {"id": "seg-mid", "start_time": 5.0, "end_time": 20.0, "speaker": "Bob", "text": "We reviewed line items."},
-        {"id": "seg-end", "start_time": 20.0, "end_time": 25.0, "speaker": "Alice", "text": "Next meeting is scheduled for November 12th at 10 AM."},
+        {
+            "id": "seg-start",
+            "start_time": 0.0,
+            "end_time": 5.0,
+            "speaker": "Alice",
+            "text": "Welcome everyone. The sole objective today is approving the FY27 budget.",
+        },
+        {
+            "id": "seg-mid",
+            "start_time": 5.0,
+            "end_time": 20.0,
+            "speaker": "Bob",
+            "text": "We reviewed line items.",
+        },
+        {
+            "id": "seg-end",
+            "start_time": 20.0,
+            "end_time": 25.0,
+            "speaker": "Alice",
+            "text": "Next meeting is scheduled for November 12th at 10 AM.",
+        },
     ]
     chunker = TranscriptChunker(max_prompt_tokens=200)
     chunks = chunker.chunk_segments(segments)
@@ -282,15 +370,26 @@ def test_duplicate_information_across_chunks() -> None:
         executive_summary="Team reviewed architecture.",
         topics=[],
         decisions=[
-            DecisionOutput(decision_text="Use Postgres for primary database", confidence=DecisionConfidence.EXPLICIT),
+            DecisionOutput(
+                decision_text="Use Postgres for primary database",
+                confidence=DecisionConfidence.EXPLICIT,
+            ),
         ],
         action_items=[],
         risks=[],
         open_questions=[],
     )
     chunk_findings = [
-        {"decisions": [{"decision_text": "Use Postgres for primary database", "confidence": "EXPLICIT"}]},
-        {"decisions": [{"decision_text": "Use Postgres for primary database", "confidence": "EXPLICIT"}]},
+        {
+            "decisions": [
+                {"decision_text": "Use Postgres for primary database", "confidence": "EXPLICIT"}
+            ]
+        },
+        {
+            "decisions": [
+                {"decision_text": "Use Postgres for primary database", "confidence": "EXPLICIT"}
+            ]
+        },
     ]
     # Ensure items preserved does not double count
     mock_provider = MagicMock(spec=LLMProvider)
@@ -305,7 +404,13 @@ def test_summary_omits_material_fact_triggers_targeted_repair() -> None:
     verifier = VerificationAgent(mock_provider, Settings(LLM_MODEL="gpt-oss-120b"))
 
     valid_id = uuid.uuid4()
-    all_segments = [{"id": str(valid_id), "speaker": "Alice", "text": "We decided to allocate $25k to penetration testing."}]
+    all_segments = [
+        {
+            "id": str(valid_id),
+            "speaker": "Alice",
+            "text": "We decided to allocate $25k to penetration testing.",
+        }
+    ]
 
     # Output synthesized by LLM that accidentally omitted the pen testing decision
     output = MeetingAnalysisOutput(
@@ -346,7 +451,13 @@ def test_summary_includes_unsupported_claim_fails_verification() -> None:
     verifier = VerificationAgent(mock_provider, Settings(LLM_MODEL="gpt-oss-120b"))
 
     valid_id = uuid.uuid4()
-    all_segments = [{"id": str(valid_id), "speaker": "Alice", "text": "Someone needs to clean up the staging environment."}]
+    all_segments = [
+        {
+            "id": str(valid_id),
+            "speaker": "Alice",
+            "text": "Someone needs to clean up the staging environment.",
+        }
+    ]
 
     # Hallucinated owner "Zack" who is never mentioned
     output = MeetingAnalysisOutput(
@@ -452,7 +563,7 @@ async def test_persistence_and_retrieval_of_evidence_references() -> None:
     mock_saved_analysis = MagicMock(id=uuid.uuid4())
     mock_analysis_repo.create_analysis.return_value = mock_saved_analysis
 
-    res = await service.execute_analysis(
+    await service.execute_analysis(
         meeting_id=mock_seg.meeting_id,
         user_id=uuid.uuid4(),
         segments=[mock_seg],
@@ -470,6 +581,7 @@ async def test_persistence_and_retrieval_of_evidence_references() -> None:
 # ==============================================================================
 # Additional Tests for Single Unified Meeting Summary Requirements
 # ==============================================================================
+
 
 def test_unified_summary_contains_full_narrative_and_targeted_repair() -> None:
     """Verifies that the unified summary narrative is preserved and targeted repair weaves missing items into it."""
@@ -512,6 +624,7 @@ def test_unified_summary_contains_full_narrative_and_targeted_repair() -> None:
     ]
 
     from app.agents.verification_agent import VerificationReport
+
     report = VerificationReport()
     valid_ids = {str(seg1), str(seg2)}
 
@@ -524,7 +637,10 @@ def test_unified_summary_contains_full_narrative_and_targeted_repair() -> None:
     # And critically, both must be woven into the unified executive_summary narrative
     assert "Adopt Postgres 16 as standard database" in analysis_output.executive_summary
     assert "Benchmark connection pooling under 10k RPS load" in analysis_output.executive_summary
-    assert "Alice reported that cluster latency has improved by 25%" in analysis_output.executive_summary
+    assert (
+        "Alice reported that cluster latency has improved by 25%"
+        in analysis_output.executive_summary
+    )
     assert report.repaired_items_count == 2
 
 
@@ -532,12 +648,17 @@ def test_ui_template_single_summary_section() -> None:
     """Verifies meeting_detail.html contains one single Summary section and no separate tabs/panes for former categories."""
     import pathlib
 
-    template_path = pathlib.Path(__file__).resolve().parents[2] / "app" / "templates" / "meeting_detail.html"
+    template_path = (
+        pathlib.Path(__file__).resolve().parents[2] / "app" / "templates" / "meeting_detail.html"
+    )
     assert template_path.exists(), f"Template not found at {template_path}"
     content = template_path.read_text(encoding="utf-8")
 
     # Single Summary section header must be present
-    assert '<h2 class="text-xl font-bold text-gray-900">Summary</h2>' in content or "Summary</h2>" in content
+    assert (
+        '<h2 class="text-xl font-bold text-gray-900">Summary</h2>' in content
+        or "Summary</h2>" in content
+    )
     assert 'id="pane-summary"' in content
 
     # Category tabs and separate category panes must NOT be present
@@ -553,7 +674,6 @@ def test_ui_template_single_summary_section() -> None:
 def test_markdown_export_single_summary_section() -> None:
     """Verifies Markdown export contains one single ## Summary section and no separate category headings."""
     from app.models.meeting import Meeting
-    from app.services.export_service import ExportService
 
     meeting_id = uuid.uuid4()
     analysis = MeetingAnalysis(
@@ -590,5 +710,3 @@ def test_markdown_export_single_summary_section() -> None:
     assert "## Risks & Open Questions" not in md
     assert "## Speaker Contributions" not in md
     assert "## Context & Technical Specifications" not in md
-
-

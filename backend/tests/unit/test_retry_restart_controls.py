@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import Request
 
-from app.api.v1.status import retry_processing_job, restart_processing_job
+from app.api.v1.status import restart_processing_job, retry_processing_job
 from app.core.security import UserContext
 from app.models.meeting import Meeting, MeetingStatus
 from app.models.meeting_analysis import MeetingAnalysis
@@ -30,7 +30,9 @@ async def test_retry_skips_transcription_when_valid_transcript_segments_exist() 
         stage=JobStage.ANALYZING,
         attempt=1,
     )
-    meeting = Meeting(id=meeting_id, user_id=user_id, title="Test Meeting", status=MeetingStatus.ACTIVE)
+    meeting = Meeting(
+        id=meeting_id, user_id=user_id, title="Test Meeting", status=MeetingStatus.ACTIVE
+    )
     recording = MagicMock(original_filename="audio.wav", storage_key="recordings/audio.wav")
 
     # Existing transcript with segments
@@ -99,7 +101,7 @@ async def test_retry_skips_transcription_when_valid_transcript_segments_exist() 
         analysis_service=analysis_service,
     )
 
-    completed_job = await service.execute_job(
+    await service.execute_job(
         job_id=job_id,
         meeting_id=meeting_id,
         worker_id="worker-test",
@@ -115,7 +117,10 @@ async def test_retry_skips_transcription_when_valid_transcript_segments_exist() 
     # 2. Resumed directly into analysis
     job_repo.update_stage.assert_any_call(job=job, stage=JobStage.ANALYZING)
     analysis_service.execute_analysis.assert_called_once()
-    assert analysis_service.execute_analysis.call_args.kwargs["segments"] == [db_segment1, db_segment2]
+    assert analysis_service.execute_analysis.call_args.kwargs["segments"] == [
+        db_segment1,
+        db_segment2,
+    ]
 
     # 3. Completed lease release
     lease_tracker.release_lease.assert_called_once_with(
@@ -147,8 +152,10 @@ async def test_retry_endpoint_rejects_active_running_job() -> None:
     request.url.path = f"/api/v1/meetings/{meeting_id}/retry"
 
     session = AsyncMock()
-    with patch("app.api.v1.status.MeetingRepository") as mock_meeting_cls, \
-         patch("app.api.v1.status.JobRepository") as mock_job_cls:
+    with (
+        patch("app.api.v1.status.MeetingRepository") as mock_meeting_cls,
+        patch("app.api.v1.status.JobRepository") as mock_job_cls,
+    ):
         mock_m_repo = AsyncMock()
         mock_m_repo.get_by_id.return_value = meeting
         mock_meeting_cls.return_value = mock_m_repo
@@ -172,7 +179,7 @@ async def test_retry_endpoint_rejects_active_running_job() -> None:
 @pytest.mark.asyncio
 async def test_retry_endpoint_enforces_tenant_authorization() -> None:
     """User B cannot retry User A's meeting (returns 404)."""
-    user_a = uuid.uuid4()
+    uuid.uuid4()
     user_b = uuid.uuid4()
     meeting_id = uuid.uuid4()
     current_user_b = UserContext(user_id=user_b, email="user_b@example.com")
@@ -219,9 +226,11 @@ async def test_retry_endpoint_success_and_celery_dispatch() -> None:
     request.url.path = f"/api/v1/meetings/{meeting_id}/retry"
 
     session = AsyncMock()
-    with patch("app.api.v1.status.MeetingRepository") as mock_meeting_cls, \
-         patch("app.api.v1.status.JobRepository") as mock_job_cls, \
-         patch("app.api.v1.status.celery_app") as mock_celery:
+    with (
+        patch("app.api.v1.status.MeetingRepository") as mock_meeting_cls,
+        patch("app.api.v1.status.JobRepository") as mock_job_cls,
+        patch("app.api.v1.status.celery_app") as mock_celery,
+    ):
         mock_m_repo = AsyncMock()
         mock_m_repo.get_by_id.return_value = meeting
         mock_meeting_cls.return_value = mock_m_repo
@@ -271,18 +280,28 @@ async def test_restart_endpoint_cleans_artifacts_and_resets_state() -> None:
         stage=JobStage.COMPLETED,
         attempt=2,
     )
-    existing_analysis = MeetingAnalysis(id=analysis_id, meeting_id=meeting_id, user_id=user_id, provider="groq", model="gpt-oss-120b")
-    existing_transcript = Transcript(id=transcript_id, meeting_id=meeting_id, user_id=user_id, provider="whisper")
+    existing_analysis = MeetingAnalysis(
+        id=analysis_id,
+        meeting_id=meeting_id,
+        user_id=user_id,
+        provider="groq",
+        model="gpt-oss-120b",
+    )
+    existing_transcript = Transcript(
+        id=transcript_id, meeting_id=meeting_id, user_id=user_id, provider="whisper"
+    )
 
     request = MagicMock(spec=Request)
     request.url.path = f"/api/v1/meetings/{meeting_id}/restart"
 
     session = AsyncMock()
-    with patch("app.api.v1.status.MeetingRepository") as mock_meeting_cls, \
-         patch("app.api.v1.status.JobRepository") as mock_job_cls, \
-         patch("app.api.v1.status.AnalysisRepository") as mock_analysis_cls, \
-         patch("app.api.v1.status.TranscriptRepository") as mock_transcript_cls, \
-         patch("app.api.v1.status.celery_app") as mock_celery:
+    with (
+        patch("app.api.v1.status.MeetingRepository") as mock_meeting_cls,
+        patch("app.api.v1.status.JobRepository") as mock_job_cls,
+        patch("app.api.v1.status.AnalysisRepository") as mock_analysis_cls,
+        patch("app.api.v1.status.TranscriptRepository") as mock_transcript_cls,
+        patch("app.api.v1.status.celery_app") as mock_celery,
+    ):
         mock_m_repo = AsyncMock()
         mock_m_repo.get_by_id.return_value = meeting
         mock_meeting_cls.return_value = mock_m_repo

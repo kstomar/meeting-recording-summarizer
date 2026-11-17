@@ -1,6 +1,7 @@
-import pytest
 import subprocess
 from pathlib import Path
+
+import pytest
 
 from app.core.config import Settings
 from app.providers.diarization.pyannote_provider import PyannoteDiarizationProvider
@@ -37,7 +38,7 @@ async def test_real_pyannote_multi_speaker_recording(tmp_path: Path) -> None:
     assert result.provider == "pyannote_community_1"
     assert len(result.turns) > 0
 
-    unique_speakers = set(t.speaker_label for t in result.turns)
+    unique_speakers = {t.speaker_label for t in result.turns}
     assert len(unique_speakers) >= 2, f"Expected multiple distinct speakers, got: {unique_speakers}"
 
     # 2. Alignment with synthetic transcript segments across the duration
@@ -68,7 +69,7 @@ async def test_real_pyannote_multi_speaker_recording(tmp_path: Path) -> None:
     alignment_service = AlignmentService()
     aligned = alignment_service.align(mock_segments, result.turns)
 
-    aligned_speakers = set(s.speaker_label for s in aligned)
+    aligned_speakers = {s.speaker_label for s in aligned}
     assert len(aligned_speakers) >= 2, f"Alignment collapsed distinct speakers: {aligned_speakers}"
     assert "SPEAKER_00" not in aligned_speakers or len(aligned_speakers) > 1
 
@@ -83,14 +84,27 @@ def test_real_pyannote_single_speaker_or_tone(tmp_path: Path) -> None:
         pytest.skip("Valid HF_TOKEN required for real pyannote test.")
 
     tone_wav = tmp_path / "tone.wav"
-    subprocess.run([
-        "ffmpeg", "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=4",
-        "-ar", "16000", "-ac", "1", str(tone_wav)
-    ], check=True, capture_output=True)
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=4",
+            "-ar",
+            "16000",
+            "-ac",
+            "1",
+            str(tone_wav),
+        ],
+        check=True,
+        capture_output=True,
+    )
 
     provider = PyannoteDiarizationProvider(settings)
     result = provider.diarize(str(tone_wav))
 
-    unique_speakers = set(t.speaker_label for t in result.turns)
+    unique_speakers = {t.speaker_label for t in result.turns}
     # A pure tone has 0 or at most 1 speaker; it must never invent multiple speakers
     assert len(unique_speakers) <= 1

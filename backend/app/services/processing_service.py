@@ -153,7 +153,10 @@ class ProcessingService:
 
                 # If both transcript and analysis already exist, mark job as completed
                 if existing_analysis or not self.analysis_service:
-                    logger.info("Meeting %s already has valid transcript and analysis. Completing job.", meeting_id)
+                    logger.info(
+                        "Meeting %s already has valid transcript and analysis. Completing job.",
+                        meeting_id,
+                    )
                     completed_job = await lease_tracker.release_lease(
                         job_id=job_id,
                         worker_id=worker_id,

@@ -43,7 +43,8 @@ def render_markdown_filter(text: str | None) -> str:
     """Jinja filter to safely convert Markdown into clean HTML."""
     if not text:
         return ""
-    return _md_renderer.render(text)
+    rendered = _md_renderer.render(text)
+    return str(rendered)
 
 
 templates.env.filters["markdown"] = render_markdown_filter

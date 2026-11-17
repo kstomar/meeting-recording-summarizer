@@ -1,18 +1,23 @@
-import pytest
+import uuid
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from app.core.config import Settings
-from app.services.processing_service import ProcessingPipelineError, ProcessingService
-from app.services.diarization_service import DiarizationProcessingError
-from app.models.processing_job import JobStage, JobStatus, ProcessingJob
 from app.models.meeting import Meeting, MeetingStatus
+from app.models.processing_job import JobStage, JobStatus, ProcessingJob
 from app.models.recording import Recording
 from app.providers.transcription.base import TranscriptionResult, TranscriptSegmentResult
+from app.services.diarization_service import DiarizationProcessingError
+from app.services.processing_service import ProcessingPipelineError, ProcessingService
 from app.workers.job_lease import JobLeaseTracker
-import uuid
+
 
 def test_production_rejects_none_or_mock_diarization():
     """Confirms production configuration does not permit 'none' or 'mock' diarization."""
-    with pytest.raises(ValueError, match="DIARIZATION_PROVIDER cannot be 'mock' or 'none' in production"):
+    with pytest.raises(
+        ValueError, match="DIARIZATION_PROVIDER cannot be 'mock' or 'none' in production"
+    ):
         Settings(
             APP_ENV="production",
             DIARIZATION_PROVIDER="none",
@@ -27,7 +32,9 @@ def test_production_rejects_none_or_mock_diarization():
             UPLOAD_TOKEN_SECRET="valid_upload_token_secret",
         )
 
-    with pytest.raises(ValueError, match="DIARIZATION_PROVIDER cannot be 'mock' or 'none' in production"):
+    with pytest.raises(
+        ValueError, match="DIARIZATION_PROVIDER cannot be 'mock' or 'none' in production"
+    ):
         Settings(
             APP_ENV="production",
             DIARIZATION_PROVIDER="mock",
@@ -42,8 +49,11 @@ def test_production_rejects_none_or_mock_diarization():
             UPLOAD_TOKEN_SECRET="valid_upload_token_secret",
         )
 
+
 @pytest.mark.asyncio
-async def test_production_diarization_failure_raises_and_does_not_fabricate_single_speaker(tmp_path):
+async def test_production_diarization_failure_raises_and_does_not_fabricate_single_speaker(
+    tmp_path,
+):
     """In production mode, if diarization fails, pipeline must raise ProcessingPipelineError
     instead of silently fabricating or accepting a single-speaker fallback.
     """
@@ -66,8 +76,11 @@ async def test_production_diarization_failure_raises_and_does_not_fabricate_sing
     user_id = uuid.uuid4()
 
     job = ProcessingJob(
-        id=job_id, meeting_id=meeting_id, user_id=user_id,
-        status=JobStatus.RUNNING, stage=JobStage.CREATED
+        id=job_id,
+        meeting_id=meeting_id,
+        user_id=user_id,
+        status=JobStatus.RUNNING,
+        stage=JobStage.CREATED,
     )
     meeting = Meeting(id=meeting_id, user_id=user_id, title="Test", status=MeetingStatus.ACTIVE)
     recording = Recording(
@@ -94,23 +107,42 @@ async def test_production_diarization_failure_raises_and_does_not_fabricate_sing
 
     # Context manager for scratch dir
     from contextlib import contextmanager
+
     @contextmanager
     def fake_scratch(prefix=""):
         yield tmp_path
+
     audio_service.temporary_scratch_dir = fake_scratch
 
     transcription_provider = MagicMock()
     transcription_provider.transcribe.return_value = TranscriptionResult(
-        provider="whisper", model="v3", language="en", total_duration_seconds=10.0,
+        provider="whisper",
+        model="v3",
+        language="en",
+        total_duration_seconds=10.0,
         raw_transcript_text="Test speech",
         segments=[
-            TranscriptSegmentResult(sequence_index=0, start_time=0.0, end_time=5.0, text="Hello", speaker_label="SPEAKER_00"),
-            TranscriptSegmentResult(sequence_index=1, start_time=5.0, end_time=10.0, text="World", speaker_label="SPEAKER_00"),
-        ]
+            TranscriptSegmentResult(
+                sequence_index=0,
+                start_time=0.0,
+                end_time=5.0,
+                text="Hello",
+                speaker_label="SPEAKER_00",
+            ),
+            TranscriptSegmentResult(
+                sequence_index=1,
+                start_time=5.0,
+                end_time=10.0,
+                text="World",
+                speaker_label="SPEAKER_00",
+            ),
+        ],
     )
 
     diarization_service = MagicMock()
-    diarization_service.diarize_audio.side_effect = DiarizationProcessingError("Pyannote GPU out of memory", is_retryable=True)
+    diarization_service.diarize_audio.side_effect = DiarizationProcessingError(
+        "Pyannote GPU out of memory", is_retryable=True
+    )
 
     lease_tracker = MagicMock(spec=JobLeaseTracker)
     lease_tracker.claim_job.return_value = job

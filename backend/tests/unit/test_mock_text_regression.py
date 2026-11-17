@@ -1,15 +1,8 @@
-import uuid
 from unittest.mock import MagicMock
-import pytest
 
 from app.core.config import Settings
-from app.providers.transcription.mock_whisper_provider import MockWhisperProvider
-from app.providers.llm.mock_provider import MockLLMProvider
-from app.providers.transcription.groq_whisper_provider import GroqWhisperProvider
-from app.providers.llm.groq_provider import GroqProvider
-from app.providers.storage.r2_provider import R2StorageProvider
 from app.providers.diarization.none_provider import NoneDiarizationProvider
-
+from app.providers.transcription.groq_whisper_provider import GroqWhisperProvider
 
 MOCK_TRANSCRIPT_LEAK_PHRASE = "Let us review the database schema migration plan"
 MOCK_SUMMARY_LEAK_PHRASE = "The team reviewed database migration architecture"
@@ -46,7 +39,7 @@ def test_production_providers_do_not_contain_mock_text():
                 "end": 2.5,
                 "text": "Actual customer discussion regarding project roadmaps.",
             }
-        ]
+        ],
     }
     result = whisper_prov._parse_payload(payload)
     assert MOCK_TRANSCRIPT_LEAK_PHRASE not in result.raw_transcript_text
@@ -71,4 +64,3 @@ def test_empty_transcription_payload_does_not_produce_mock_text():
     result = whisper_prov._parse_payload(empty_payload)
     assert len(result.segments) == 0
     assert MOCK_TRANSCRIPT_LEAK_PHRASE not in result.raw_transcript_text
-

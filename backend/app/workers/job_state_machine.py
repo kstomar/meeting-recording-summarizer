@@ -10,7 +10,12 @@ class JobStateMachine:
 
     VALID_STATUS_TRANSITIONS: dict[JobStatus, set[JobStatus]] = {
         JobStatus.PENDING: {JobStatus.RUNNING, JobStatus.CANCELLED, JobStatus.FAILED},
-        JobStatus.RUNNING: {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.PENDING},
+        JobStatus.RUNNING: {
+            JobStatus.COMPLETED,
+            JobStatus.FAILED,
+            JobStatus.CANCELLED,
+            JobStatus.PENDING,
+        },
         JobStatus.COMPLETED: {JobStatus.PENDING},  # Can restart from beginning
         JobStatus.FAILED: {JobStatus.PENDING},  # Retry re-enqueues to PENDING
         JobStatus.CANCELLED: {JobStatus.PENDING},  # Can retry or restart

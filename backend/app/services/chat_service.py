@@ -4,6 +4,7 @@ import math
 import random
 import re
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -56,26 +57,195 @@ Adhere strictly to the following rules:
 
 # Common stopwords to exclude when scoring segments for keyword relevance
 STOP_WORDS = {
-    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
-    "arent", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both",
-    "but", "by", "cant", "cannot", "could", "couldnt", "did", "didnt", "do", "does", "doesnt",
-    "doing", "dont", "down", "during", "each", "few", "for", "from", "further", "had", "hadnt",
-    "has", "hasnt", "have", "havent", "having", "he", "hed", "hell", "hes", "her", "here", "heres",
-    "hers", "herself", "him", "himself", "his", "how", "hows", "i", "id", "ill", "im", "ive", "if",
-    "in", "into", "is", "isnt", "it", "its", "itself", "lets", "me", "more", "most", "mustnt",
-    "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought",
-    "our", "ours", "ourselves", "out", "over", "own", "same", "shant", "she", "shed", "shell", "shes",
-    "should", "shouldnt", "so", "some", "such", "than", "that", "thats", "the", "their", "theirs",
-    "them", "themselves", "then", "there", "theres", "these", "they", "theyd", "theyll", "theyre",
-    "theyve", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasnt",
-    "we", "wed", "well", "were", "weve", "werent", "what", "whats", "when", "whens", "where", "wheres",
-    "which", "while", "who", "whos", "whom", "why", "whys", "with", "wont", "would", "wouldnt",
-    "you", "youd", "youll", "youre", "youve", "your", "yours", "yourself", "yourselves"
+    "a",
+    "about",
+    "above",
+    "after",
+    "again",
+    "against",
+    "all",
+    "am",
+    "an",
+    "and",
+    "any",
+    "are",
+    "arent",
+    "as",
+    "at",
+    "be",
+    "because",
+    "been",
+    "before",
+    "being",
+    "below",
+    "between",
+    "both",
+    "but",
+    "by",
+    "cant",
+    "cannot",
+    "could",
+    "couldnt",
+    "did",
+    "didnt",
+    "do",
+    "does",
+    "doesnt",
+    "doing",
+    "dont",
+    "down",
+    "during",
+    "each",
+    "few",
+    "for",
+    "from",
+    "further",
+    "had",
+    "hadnt",
+    "has",
+    "hasnt",
+    "have",
+    "havent",
+    "having",
+    "he",
+    "hed",
+    "hell",
+    "hes",
+    "her",
+    "here",
+    "heres",
+    "hers",
+    "herself",
+    "him",
+    "himself",
+    "his",
+    "how",
+    "hows",
+    "i",
+    "id",
+    "ill",
+    "im",
+    "ive",
+    "if",
+    "in",
+    "into",
+    "is",
+    "isnt",
+    "it",
+    "its",
+    "itself",
+    "lets",
+    "me",
+    "more",
+    "most",
+    "mustnt",
+    "my",
+    "myself",
+    "no",
+    "nor",
+    "not",
+    "of",
+    "off",
+    "on",
+    "once",
+    "only",
+    "or",
+    "other",
+    "ought",
+    "our",
+    "ours",
+    "ourselves",
+    "out",
+    "over",
+    "own",
+    "same",
+    "shant",
+    "she",
+    "shed",
+    "shell",
+    "shes",
+    "should",
+    "shouldnt",
+    "so",
+    "some",
+    "such",
+    "than",
+    "that",
+    "thats",
+    "the",
+    "their",
+    "theirs",
+    "them",
+    "themselves",
+    "then",
+    "there",
+    "theres",
+    "these",
+    "they",
+    "theyd",
+    "theyll",
+    "theyre",
+    "theyve",
+    "this",
+    "those",
+    "through",
+    "to",
+    "too",
+    "under",
+    "until",
+    "up",
+    "very",
+    "was",
+    "wasnt",
+    "we",
+    "wed",
+    "well",
+    "were",
+    "weve",
+    "werent",
+    "what",
+    "whats",
+    "when",
+    "whens",
+    "where",
+    "wheres",
+    "which",
+    "while",
+    "who",
+    "whos",
+    "whom",
+    "why",
+    "whys",
+    "with",
+    "wont",
+    "would",
+    "wouldnt",
+    "you",
+    "youd",
+    "youll",
+    "youre",
+    "youve",
+    "your",
+    "yours",
+    "yourself",
+    "yourselves",
 }
 
 OVERVIEW_KEYWORDS = {
-    "about", "overview", "summary", "summarize", "purpose", "goal", "objective",
-    "moto", "motto", "agenda", "topic", "discuss", "discussed", "discussion"
+    "about",
+    "overview",
+    "summary",
+    "summarize",
+    "purpose",
+    "goal",
+    "objective",
+    "moto",
+    "motto",
+    "agenda",
+    "topic",
+    "discuss",
+    "discussed",
+    "discussion",
 }
 
 
@@ -106,7 +276,7 @@ class ChatService:
 
     def _select_relevant_segments(
         self,
-        segments: list[TranscriptSegment],
+        segments: Sequence[TranscriptSegment],
         question: str,
         max_token_budget: int = 3500,
     ) -> list[TranscriptSegment]:
@@ -123,7 +293,7 @@ class ChatService:
         total_tokens = sum(token_costs)
 
         if total_tokens <= max_token_budget:
-            return segments
+            return list(segments)
 
         # High-capacity budget exceeded: perform relevance selection
         q_tokens = re.findall(r"\w+", question.lower())
@@ -150,8 +320,14 @@ class ChatService:
                     score += 5.0
 
             # Boost action/decision phrases if requested
-            if any(k in q_tokens for k in ("decision", "decide", "agreed", "action", "deadline", "todo")):
-                if any(k in seg_text for k in ("action", "decide", "agreed", "next step", "deadline", "by next")):
+            if any(
+                k in q_tokens
+                for k in ("decision", "decide", "agreed", "action", "deadline", "todo")
+            ):
+                if any(
+                    k in seg_text
+                    for k in ("action", "decide", "agreed", "next step", "deadline", "by next")
+                ):
                     score += 4.0
 
             scored_indices.append((score, idx))
@@ -172,7 +348,7 @@ class ChatService:
                     accumulated_tokens += cost
 
         # Add top scoring segments and immediate neighbors for context
-        for score, idx in scored_indices:
+        for _score, idx in scored_indices:
             if idx in selected_indices:
                 continue
 
@@ -204,7 +380,9 @@ class ChatService:
         max_total_budget_seconds: float = 20.0,
     ) -> LLMResponse:
         """Executes LLM call with bounded exponential backoff on transient errors (429/5xx)."""
-        retries_limit = max_retries if max_retries is not None else getattr(self.settings, "LLM_MAX_RETRIES", 2)
+        retries_limit = (
+            max_retries if max_retries is not None else getattr(self.settings, "LLM_MAX_RETRIES", 2)
+        )
         attempt = 0
         elapsed_time = 0.0
         start_time = datetime.now(UTC).timestamp()
@@ -226,7 +404,11 @@ class ChatService:
 
                 # Check if retryable and within attempt limit and elapsed budget
                 if exc.is_retryable and attempt <= retries_limit:
-                    sleep_time = exc.retry_after if (exc.retry_after is not None and exc.retry_after > 0) else None
+                    sleep_time = (
+                        exc.retry_after
+                        if (exc.retry_after is not None and exc.retry_after > 0)
+                        else None
+                    )
                     if sleep_time is None:
                         jitter = random.uniform(0.1, 0.4)
                         sleep_time = (base_delay_seconds * (2 ** (attempt - 1))) + jitter
@@ -343,7 +525,9 @@ User Question: {question}"""
             answer_text = data.get("answer", "")
             raw_citations = data.get("cited_segment_ids", [])
             if not answer_text:
-                answer_text = "The meeting transcript does not contain information to answer this question."
+                answer_text = (
+                    "The meeting transcript does not contain information to answer this question."
+                )
         except LLMProviderError as exc:
             logger.error(
                 "LLM provider error in chat service: status=%s retryable=%s msg=%s",
@@ -352,9 +536,7 @@ User Question: {question}"""
                 exc.message,
             )
             if exc.status_code == 429:
-                answer_text = (
-                    "The AI service is currently experiencing high demand. Please try asking again in a moment."
-                )
+                answer_text = "The AI service is currently experiencing high demand. Please try asking again in a moment."
             else:
                 answer_text = "I am unable to answer this question at this time due to an error."
             raw_citations = []

@@ -60,6 +60,7 @@ select = [
     "UP",  # pyupgrade
 ]
 ignore = [
+    "E501", # line too long (formatting handled by ruff format)
     "B008", # do not perform function calls in argument defaults (FastAPI Depends idiom)
     "UP046", # Generic class uses Generic subclass instead of PEP 695 type parameters (Pydantic v2 compatibility)
 ]

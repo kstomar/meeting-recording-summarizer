@@ -16,9 +16,7 @@ from app.core.celery_app import celery_app
 from app.core.database import async_session_factory
 from app.core.rate_limiter import job_control_limiter, rate_limit, status_polling_limiter
 from app.core.security import UserContext
-from app.models.meeting_analysis import MeetingAnalysis
 from app.models.processing_job import JobStage, JobStatus, ProcessingJob
-from app.models.transcript import Transcript
 from app.repositories.analysis_repository import AnalysisRepository
 from app.repositories.job_repository import JobRepository
 from app.repositories.meeting_repository import MeetingRepository

@@ -73,9 +73,7 @@ class Settings(BaseSettings):
     TRANSCRIPTION_API_KEY: str = "gsk_placeholder_groq_api_key"
     TRANSCRIPTION_MODEL: str = "whisper-large-v3-turbo"
     TRANSCRIPTION_TIMEOUT_SECONDS: int = 300
-    DIARIZATION_PROVIDER: Literal["pyannote_community_1", "none", "mock"] = (
-        "pyannote_community_1"
-    )
+    DIARIZATION_PROVIDER: Literal["pyannote_community_1", "none", "mock"] = "pyannote_community_1"
     HF_TOKEN: str = "hf_placeholder_token"
 
     # 7. Celery & Redis Task Broker

@@ -27,7 +27,7 @@ from app.repositories.transcript_repository import TranscriptRepository
 from app.services.alignment_service import AlignmentService
 from app.services.audio_service import AudioService
 from app.services.diarization_service import DiarizationService
-from app.services.processing_service import ProcessingPipelineError, ProcessingService
+from app.services.processing_service import ProcessingService
 from app.workers.job_lease import JobLeaseTracker
 
 

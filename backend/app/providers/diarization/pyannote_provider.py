@@ -67,6 +67,7 @@ class PyannoteDiarizationProvider(DiarizationProvider):
         try:
             import torch
             import torchaudio
+
             # Pre-load audio to ensure 16kHz mono tensor or pass valid AudioFile dict
             waveform, sample_rate = torchaudio.load(str(path))
             if sample_rate != 16000:

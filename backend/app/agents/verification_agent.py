@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 
 from app.core.config import Settings
 from app.prompts.meeting_analysis_prompt import (
-    SYSTEM_COMPLETENESS_VERIFICATION_INSTRUCTIONS,
     SYSTEM_VERIFICATION_INSTRUCTIONS,
 )
 from app.providers.llm.base import LLMProvider, LLMProviderError
@@ -18,7 +17,6 @@ from app.schemas.analysis import (
     MeetingAnalysisOutput,
     OpenQuestionOutput,
     RiskOutput,
-    TopicOutput,
 )
 
 logger = logging.getLogger(__name__)
@@ -27,7 +25,9 @@ logger = logging.getLogger(__name__)
 class MaterialInventoryItem(BaseModel):
     """An extracted material fact or outcome tracked during analysis."""
 
-    category: str  # "topic", "decision", "action_item", "risk", "open_question", "detail", "next_step"
+    category: (
+        str  # "topic", "decision", "action_item", "risk", "open_question", "detail", "next_step"
+    )
     text: str
     owner: str | None = None
     due_date: str | None = None
@@ -146,15 +146,11 @@ class VerificationAgent:
         if output.context_and_details:
             for item in output.context_and_details:
                 raw_e = item.get("evidence_segment_ids", [])
-                item["evidence_segment_ids"] = [
-                    str(sid) for sid in raw_e if str(sid) in valid_ids
-                ]
+                item["evidence_segment_ids"] = [str(sid) for sid in raw_e if str(sid) in valid_ids]
         if output.next_steps:
             for item in output.next_steps:
                 raw_e = item.get("evidence_segment_ids", [])
-                item["evidence_segment_ids"] = [
-                    str(sid) for sid in raw_e if str(sid) in valid_ids
-                ]
+                item["evidence_segment_ids"] = [str(sid) for sid in raw_e if str(sid) in valid_ids]
 
         # 3. Completeness inventory verification & targeted repair
         if chunk_findings:
@@ -176,7 +172,7 @@ class VerificationAgent:
         existing_actions_norm = [_normalize_text(a.action_text) for a in output.action_items]
         existing_risks_norm = [_normalize_text(r.risk_text) for r in output.risks]
         existing_questions_norm = [_normalize_text(q.question_text) for q in output.open_questions]
-        existing_topics_norm = [_normalize_text(t.title) + " " + _normalize_text(t.summary) for t in output.topics]
+        [_normalize_text(t.title) + " " + _normalize_text(t.summary) for t in output.topics]
 
         missing_items: list[MaterialInventoryItem] = []
 
@@ -190,7 +186,11 @@ class VerificationAgent:
                     norm in ex or ex in norm or (len(set(norm.split()) & set(ex.split())) >= 4)
                     for ex in existing_decisions_norm
                 )
-                e_ids = [uuid.UUID(str(sid)) for sid in d.get("evidence_segment_ids", []) if str(sid) in valid_ids]
+                e_ids = [
+                    uuid.UUID(str(sid))
+                    for sid in d.get("evidence_segment_ids", [])
+                    if str(sid) in valid_ids
+                ]
                 item = MaterialInventoryItem(
                     category="decision",
                     text=text,
@@ -209,7 +209,11 @@ class VerificationAgent:
                     norm in ex or ex in norm or (len(set(norm.split()) & set(ex.split())) >= 3)
                     for ex in existing_actions_norm
                 )
-                e_ids = [uuid.UUID(str(sid)) for sid in a.get("evidence_segment_ids", []) if str(sid) in valid_ids]
+                e_ids = [
+                    uuid.UUID(str(sid))
+                    for sid in a.get("evidence_segment_ids", [])
+                    if str(sid) in valid_ids
+                ]
                 item = MaterialInventoryItem(
                     category="action_item",
                     text=text,
@@ -230,7 +234,11 @@ class VerificationAgent:
                     norm in ex or ex in norm or (len(set(norm.split()) & set(ex.split())) >= 3)
                     for ex in existing_risks_norm
                 )
-                e_ids = [uuid.UUID(str(sid)) for sid in r.get("evidence_segment_ids", []) if str(sid) in valid_ids]
+                e_ids = [
+                    uuid.UUID(str(sid))
+                    for sid in r.get("evidence_segment_ids", [])
+                    if str(sid) in valid_ids
+                ]
                 item = MaterialInventoryItem(
                     category="risk",
                     text=text,
@@ -249,7 +257,11 @@ class VerificationAgent:
                     norm in ex or ex in norm or (len(set(norm.split()) & set(ex.split())) >= 3)
                     for ex in existing_questions_norm
                 )
-                e_ids = [uuid.UUID(str(sid)) for sid in q.get("evidence_segment_ids", []) if str(sid) in valid_ids]
+                e_ids = [
+                    uuid.UUID(str(sid))
+                    for sid in q.get("evidence_segment_ids", [])
+                    if str(sid) in valid_ids
+                ]
                 item = MaterialInventoryItem(
                     category="open_question",
                     text=text,
@@ -264,7 +276,10 @@ class VerificationAgent:
 
         # Targeted Repair: insert missing material items into final output
         if missing_items:
-            logger.info("Completeness audit identified %d missing items. Executing targeted repair.", len(missing_items))
+            logger.info(
+                "Completeness audit identified %d missing items. Executing targeted repair.",
+                len(missing_items),
+            )
             for m in missing_items:
                 if m.category == "decision":
                     output.decisions.append(
@@ -327,18 +342,24 @@ class VerificationAgent:
                 norm_m = _normalize_text(m.text)
                 if norm_m not in exec_norm:
                     if m.category == "decision":
-                        repaired_narrative_additions.append(f"Regarding key agreements: The team decided: {m.text}.")
+                        repaired_narrative_additions.append(
+                            f"Regarding key agreements: The team decided: {m.text}."
+                        )
                     elif m.category == "action_item":
                         owner_str = f"assigned to {m.owner}" if m.owner else "unassigned"
                         due_str = f" with deadline {m.due_date}" if m.due_date else ""
-                        repaired_narrative_additions.append(f"For follow-up actions: {m.text} ({owner_str}{due_str}).")
+                        repaired_narrative_additions.append(
+                            f"For follow-up actions: {m.text} ({owner_str}{due_str})."
+                        )
                     elif m.category == "risk":
                         repaired_narrative_additions.append(f"Concerning risks: {m.text}.")
                     elif m.category == "open_question":
                         repaired_narrative_additions.append(f"Pending open matters: {m.text}.")
             if repaired_narrative_additions:
                 output.executive_summary = (
-                    output.executive_summary.rstrip() + "\n\n" + " ".join(repaired_narrative_additions)
+                    output.executive_summary.rstrip()
+                    + "\n\n"
+                    + " ".join(repaired_narrative_additions)
                 )
 
     def verify_action_item_owner(
